@@ -192,6 +192,34 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
 
 
 
+        // set the texture view
+        setTextureView();
+
+
+    }
+
+
+    private List<String> getCameraResolutions() throws CameraAccessException {
+
+
+        CameraCharacteristics cameracharact = cameraManager.getCameraCharacteristics(choosen_camera_id);
+        Size[] resolutionsavailable = cameracharact.get(cameracharact.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
+
+        Log.d("resolutiontag", resolutionsavailable[0].toString());
+
+        List<String> resolutions = new ArrayList<String>();
+
+        for (int i = 0; i < resolutionsavailable.length; i++) {
+
+            float resolutionconversion = (resolutionsavailable[i].getWidth() * resolutionsavailable[i].getHeight()) / 1000000;
+            resolutions.add(i, resolutionsavailable[i].toString() + " ("+resolutionconversion+" MPix)");
+        }
+
+        return resolutions;
+    }
+
+
+    private void setTextureView() {
 
         textureView = (TextureView) findViewById(R.id.texture);
         assert textureView != null;
@@ -238,14 +266,6 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
 
 
 
-
-
-
-
-//                if(faces != null)
-//                Toast.makeText(Camera.this,faces[0].toString(),Toast.LENGTH_LONG).show();
-
-
                 if(faces != null)
                     try {
                         facerectangle = new FaceRectangle("facedrawthread",surfaceview,orientation_offset,faces,cameraWidth,cameraHeight);
@@ -266,32 +286,6 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
 
 
 
-
-
-    }
-
-
-    private List<String> getCameraResolutions() throws CameraAccessException {
-
-
-        CameraCharacteristics cameracharact = cameraManager.getCameraCharacteristics(choosen_camera_id);
-        Size[] resolutionsavailable = cameracharact.get(cameracharact.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
-
-        Log.d("resolutiontag", resolutionsavailable[0].toString());
-
-        List<String> resolutions = new ArrayList<String>();
-
-        for (int i = 0; i < resolutionsavailable.length; i++) {
-
-            float resolutionconversion = (resolutionsavailable[i].getWidth() * resolutionsavailable[i].getHeight()) / 1000000;
-            resolutions.add(i, resolutionsavailable[i].toString() + " ("+resolutionconversion+" MPix)");
-        }
-
-        return resolutions;
-    }
-
-
-    private void setTextureView() {
 
 
     }
@@ -476,6 +470,8 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                     super.onCaptureCompleted(session, request, result);
+
+                    Log.d("harsh__","checking faces");
 
                     faces = result.get(CaptureResult.STATISTICS_FACES);
 

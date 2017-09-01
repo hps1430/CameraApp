@@ -55,8 +55,10 @@ public class FaceRectangle implements Runnable {
     @Override
     public void run() {
 
+        Log.d("harsh__", "thread was here");
+
         Paint paint = new Paint();
-        paint.setColor(Color.GREEN);     //rgb(175,0,255)
+        paint.setColor(Color.GREEN);
         paint.setStyle(Paint.Style.STROKE);
 
 
