@@ -14,7 +14,9 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.Face;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Bundle;
@@ -79,6 +81,7 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
     public SurfaceView surfaceview;
     public int cameraWidth,cameraHeight;
 
+    Face[] faces = null;
     FaceRectangle facerectangle;
     public int orientation_offset;
 
@@ -89,11 +92,30 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
 
     public int width , height;
 
+    Boolean permission = true;
+    Boolean clickbuttonpressed = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
+
+
+        while(permission.equals(true)) {
+
+
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(Camera.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 200);
+
+            }
+            else
+                permission = false;
+
+        }
+
+
 
 
 
@@ -108,6 +130,7 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
         camera_face.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
 
                 if (camera_face.getText().equals("Back")) {
                     camera_face.setText("Front");
@@ -146,8 +169,11 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
             @Override
             public void onClick(View view) {
 
+                clickbuttonpressed = true;
+
+
                 try {
-                    takePicture(width,height);
+                    takePicture();
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
                 }
@@ -156,46 +182,16 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
         });
 
 
-        //set the texture view
-
-        setTextureView();
 
 
         // set the surface view for face detection
 
         surfaceview = (SurfaceView) findViewById(R.id.surfaceView);
         surfaceview.setZOrderOnTop(true);
-        surfaceview.getHolder().setFormat(PixelFormat.TRANSLUCENT); //for making it not visible on camera preview
+        surfaceview.getHolder().setFormat(PixelFormat.TRANSPARENT); //for making it not visible on camera preview
 
 
 
-
-
-
-    }
-
-
-    private List<String> getCameraResolutions() throws CameraAccessException {
-
-
-        CameraCharacteristics cameracharact = cameraManager.getCameraCharacteristics(choosen_camera_id);
-        Size[] resolutionsavailable = cameracharact.get(cameracharact.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
-
-        Log.d("resolutiontag", resolutionsavailable[0].toString());
-
-        List<String> resolutions = new ArrayList<String>();
-
-        for (int i = 0; i < resolutionsavailable.length; i++) {
-
-            float resolutionconversion = (resolutionsavailable[i].getWidth() * resolutionsavailable[i].getHeight()) / 1000000;
-            resolutions.add(i, resolutionsavailable[i].toString() + " ("+resolutionconversion+" MPix)");
-        }
-
-        return resolutions;
-    }
-
-
-    private void setTextureView() {
 
         textureView = (TextureView) findViewById(R.id.texture);
         assert textureView != null;
@@ -204,6 +200,7 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
             public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
                 //open your camera here
                 openCamera();
+
 
                 try {
                     CameraCharacteristics charac = cameraManager.getCameraCharacteristics(choosen_camera_id);
@@ -240,18 +237,61 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
             public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
 
 
-//                HashMap result = new HashMap();
-//                Face[] faces = (Face[]) result.get(CaptureResult.STATISTICS_FACES);
-//
+
+
+
+
+
 //                if(faces != null)
 //                Toast.makeText(Camera.this,faces[0].toString(),Toast.LENGTH_LONG).show();
 
 
-       //        facerectangle = new FaceRectangle("facedrawthread",surfaceview,orientation_offset,faces,cameraWidth,cameraHeight);
+                if(faces != null)
+                    try {
+                        facerectangle = new FaceRectangle("facedrawthread",surfaceview,orientation_offset,faces,cameraWidth,cameraHeight);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
 
 
             }
         });
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+
+
+    private List<String> getCameraResolutions() throws CameraAccessException {
+
+
+        CameraCharacteristics cameracharact = cameraManager.getCameraCharacteristics(choosen_camera_id);
+        Size[] resolutionsavailable = cameracharact.get(cameracharact.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
+
+        Log.d("resolutiontag", resolutionsavailable[0].toString());
+
+        List<String> resolutions = new ArrayList<String>();
+
+        for (int i = 0; i < resolutionsavailable.length; i++) {
+
+            float resolutionconversion = (resolutionsavailable[i].getWidth() * resolutionsavailable[i].getHeight()) / 1000000;
+            resolutions.add(i, resolutionsavailable[i].toString() + " ("+resolutionconversion+" MPix)");
+        }
+
+        return resolutions;
+    }
+
+
+    private void setTextureView() {
 
 
     }
@@ -360,41 +400,13 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
         }
     }
 
-//    private void configureTransform(int viewWidth, int viewHeight) {
-//        Activity activity = getActivity();
-//        if (null == textureView || null == mPreviewSize || null == activity) {
-//            return;
-//        }
-//        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-//        Matrix matrix = new Matrix();
-//        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
-//        RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
-//        float centerX = viewRect.centerX();
-//        float centerY = viewRect.centerY();
-//        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
-//            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
-//            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
-//            float scale = Math.max(
-//                    (float) viewHeight / mPreviewSize.getHeight(),
-//                    (float) viewWidth / mPreviewSize.getWidth());
-//            matrix.postScale(scale, scale, centerX, centerY);
-//            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
-//        } else if (Surface.ROTATION_180 == rotation) {
-//            matrix.postRotate(180, centerX, centerY);
-//        }
-//        mTextureView.setTransform(matrix);
-//    }
-//
 
 
 
 
 
 
-
-
-
-    protected void takePicture(int width , int height) throws CameraAccessException {
+    protected void takePicture() throws CameraAccessException {
         if(cameraDevice ==  null) {
             Log.e(TAG, "cameraDevice is null");
             return;
@@ -412,14 +424,17 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
 
+        if(clickbuttonpressed) {
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyymmddhhmmss");
             String date = dateFormat.format(new Date());
             String photoFile = "Harsh_" + date + ".jpg";
+            File myDir = new File(Environment.getExternalStorageDirectory(), "CameraApp");
+            myDir.mkdirs();
+            file = new File(myDir, photoFile);
 
+        }
 
-
-            file = new File(Environment.getExternalStorageDirectory()+photoFile);
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
@@ -429,6 +444,7 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
                         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                         byte[] bytes = new byte[buffer.capacity()];
                         buffer.get(bytes);
+                        if(clickbuttonpressed)
                         save(bytes);
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
@@ -460,8 +476,17 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                     super.onCaptureCompleted(session, request, result);
-                    Toast.makeText(Camera.this, "Saved:" + file, Toast.LENGTH_SHORT).show();
+
+                    faces = result.get(CaptureResult.STATISTICS_FACES);
+
+                    if(clickbuttonpressed) {
+                        Toast.makeText(Camera.this, "Saved:" + file, Toast.LENGTH_SHORT).show();
+                    }
+
                     createCameraPreview();
+
+                    clickbuttonpressed = false;
+
                 }
             };
             cameraDevice.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
@@ -519,9 +544,12 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
 
     private void checkappPermissions() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(Camera.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE},1);
-            return;
+
+            ActivityCompat.requestPermissions(Camera.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE},200);
+
         }
+
+
 
     }
 
@@ -533,6 +561,10 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
 
             if (grantResults.length == 1
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    permission = false;
+
+
             } else {
                 // Permission was denied or request was cancelled
                 // }

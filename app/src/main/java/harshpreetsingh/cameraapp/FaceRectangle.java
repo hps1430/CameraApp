@@ -6,6 +6,7 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.hardware.camera2.params.Face;
+import android.util.Log;
 import android.view.SurfaceView;
 
 /**
@@ -21,10 +22,12 @@ public class FaceRectangle implements Runnable {
     Rect rectangleFace;
     int orientation_offset;
 
+    Boolean loop = true;
+
     Face detectedFace;
 
 
-    public FaceRectangle(String ThreadName, SurfaceView surfaceview, int orientation_offset, Face[] faces, int cameraWidth, int cameraHeight) {
+    public FaceRectangle(String ThreadName, SurfaceView surfaceview, int orientation_offset, Face[] faces, int cameraWidth, int cameraHeight) throws InterruptedException {
 
         this.ThreadName = ThreadName;
 
@@ -46,17 +49,15 @@ public class FaceRectangle implements Runnable {
 
         thread.start();
 
+
     }
 
     @Override
     public void run() {
 
         Paint paint = new Paint();
-        paint.setColor(Color.rgb(175,0,255));
+        paint.setColor(Color.GREEN);     //rgb(175,0,255)
         paint.setStyle(Paint.Style.STROKE);
-
-
-
 
 
         Canvas currentCanvas = surfaceview.getHolder().lockCanvas();
@@ -68,7 +69,7 @@ public class FaceRectangle implements Runnable {
 
                 int canvasWidth = currentCanvas.getWidth();
                 int canvasHeight = currentCanvas.getHeight();
-                int faceWidthOffset = rectangleFace.width()/8;
+                int faceWidthOffset =  rectangleFace.width()/8;
                 int faceHeightOffset = rectangleFace.height()/8;
 
                 currentCanvas.save();
@@ -83,7 +84,7 @@ public class FaceRectangle implements Runnable {
                 int top  = (canvasHeight*t)/cameraHeight - (faceHeightOffset);
                 int right = (canvasWidth - (canvasWidth*r)/cameraWidth) + (faceWidthOffset);
                 int bottom = (canvasHeight*b)/cameraHeight + (faceHeightOffset);
-
+                Log.d("harsh___","drawing rect");
                 currentCanvas.drawRect(left, top, right, bottom, paint);
                 currentCanvas.restore();
             }
