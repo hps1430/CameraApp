@@ -22,6 +22,8 @@ public class FaceRectangle implements Runnable {
     Rect rectangleFace;
     int orientation_offset;
 
+
+
     Boolean loop = true;
 
     Face detectedFace;
@@ -35,11 +37,13 @@ public class FaceRectangle implements Runnable {
 
         this.orientation_offset = orientation_offset;
 
+        if(faces != null) {
 
-        if (faces.length > 0)
-        {
-            detectedFace = faces[0];
-            rectangleFace = detectedFace.getBounds();
+            if (faces.length > 0) {
+                detectedFace = faces[0];
+                rectangleFace = detectedFace.getBounds();
+            }
+
         }
 
         this.surfaceview = surfaceview;
@@ -61,39 +65,54 @@ public class FaceRectangle implements Runnable {
         paint.setColor(Color.GREEN);
         paint.setStyle(Paint.Style.STROKE);
 
+        Paint paint2 = new Paint();
+        paint2.setColor(Color.YELLOW);
+        paint2.setStyle(Paint.Style.STROKE);
 
         Canvas currentCanvas = surfaceview.getHolder().lockCanvas();
         if (currentCanvas != null) {
 
             currentCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
-            if (detectedFace != null && rectangleFace.height() > 0) {
+//            if (detectedFace != null && rectangleFace.height() > 0) {
+//
+//                int canvasWidth = currentCanvas.getWidth();
+//                int canvasHeight = currentCanvas.getHeight();
+//                int faceWidthOffset =  rectangleFace.width()/8;
+//                int faceHeightOffset = rectangleFace.height()/8;
+//
+//                currentCanvas.save();
+//                currentCanvas.rotate(360 - orientation_offset, canvasWidth / 2,
+//                        canvasHeight / 2);
+//
+//                int l = rectangleFace.right;
+//                int t = rectangleFace.bottom;
+//                int r = rectangleFace.left;
+//                int b = rectangleFace.top;
+//                int left = (canvasWidth - (canvasWidth*l)/cameraWidth)-(faceWidthOffset);
+//                int top  = (canvasHeight*t)/cameraHeight - (faceHeightOffset);
+//                int right = (canvasWidth - (canvasWidth*r)/cameraWidth) + (faceWidthOffset);
+//                int bottom = (canvasHeight*b)/cameraHeight + (faceHeightOffset);
+//                Log.d("harsh___","drawing rect");
+//                currentCanvas.drawRect(left, top, right, bottom, paint);
+//
+//
+                Rect rec = new Rect(300,700,1100,1500);
 
-                int canvasWidth = currentCanvas.getWidth();
-                int canvasHeight = currentCanvas.getHeight();
-                int faceWidthOffset =  rectangleFace.width()/8;
-                int faceHeightOffset = rectangleFace.height()/8;
+            Rect rec2 = new Rect(450,300,900,600);
 
-                currentCanvas.save();
-                currentCanvas.rotate(360 - orientation_offset, canvasWidth / 2,
-                        canvasHeight / 2);
 
-                int l = rectangleFace.right;
-                int t = rectangleFace.bottom;
-                int r = rectangleFace.left;
-                int b = rectangleFace.top;
-                int left = (canvasWidth - (canvasWidth*l)/cameraWidth)-(faceWidthOffset);
-                int top  = (canvasHeight*t)/cameraHeight - (faceHeightOffset);
-                int right = (canvasWidth - (canvasWidth*r)/cameraWidth) + (faceWidthOffset);
-                int bottom = (canvasHeight*b)/cameraHeight + (faceHeightOffset);
-                Log.d("harsh___","drawing rect");
-                currentCanvas.drawRect(left, top, right, bottom, paint);
-                currentCanvas.restore();
-            }
+            currentCanvas.drawRect(rec,paint);
+            currentCanvas.drawRect(rec2,paint2);
+//                currentCanvas.restore();
+//            }
         }
         surfaceview.getHolder().unlockCanvasAndPost(currentCanvas);
 
     }
+
+
+
 
 
 }

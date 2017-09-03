@@ -51,7 +51,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-public class Camera extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
+public class Camera extends AppCompatActivity implements AdapterView.OnItemSelectedListener  {
 
 
     private Button click, camera_face;
@@ -75,12 +75,13 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
     private android.util.Size[] imageDimension;
     private ImageReader imageReader;
     private File file;
-    private boolean mFlashSupported;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
     public SurfaceView surfaceview;
     public int cameraWidth,cameraHeight;
+    private int mSensorOrientation;
 
+    Face[] faces2 = null;
     Face[] faces = null;
     FaceRectangle facerectangle;
     public int orientation_offset;
@@ -265,14 +266,14 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
             public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
 
 
-
-                if(faces != null)
-                    try {
-                        facerectangle = new FaceRectangle("facedrawthread",surfaceview,orientation_offset,faces,cameraWidth,cameraHeight);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                if (faces != null)
+                        try {
+                            faces2 = faces;
+                            facerectangle = new FaceRectangle("facedrawthread", surfaceview, orientation_offset, faces, cameraWidth, cameraHeight);
+                            facerectangle.thread.join();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
                     }
-
 
             }
         });
@@ -352,13 +353,61 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
             height = imageDimension[index].getHeight();
 
 
+
             CameraCharacteristics ch = cameraManager.getCameraCharacteristics(choosen_camera_id);
+
+
+
+            //noinspection ConstantConditions
+            mSensorOrientation = ch.get(CameraCharacteristics.SENSOR_ORIENTATION);
+//            boolean swappedDimensions = false;
+//            switch (displayRotation) {
+//                case Surface.ROTATION_0:
+//                case Surface.ROTATION_180:
+//                    if (mSensorOrientation == 90 || mSensorOrientation == 270) {
+//                        swappedDimensions = true;
+//                    }
+//                    break;
+//                case Surface.ROTATION_90:
+//                case Surface.ROTATION_270:
+//                    if (mSensorOrientation == 0 || mSensorOrientation == 180) {
+//                        swappedDimensions = true;
+//                    }
+//                    break;
+//                default:
+//                    Log.e(TAG, "Display rotation is invalid: " + displayRotation);
+//            }
+//
+//
+//            Point displaySize = new Point();
+//            getWindowManager().getDefaultDisplay().getSize(displaySize);
+//            int rotatedPreviewWidth = width;
+//            int rotatedPreviewHeight = height;
+//            int maxPreviewWidth = displaySize.x;
+//            int maxPreviewHeight = displaySize.y;
+//
+//            if (swappedDimensions) {
+//                rotatedPreviewWidth = height;
+//                rotatedPreviewHeight = width;
+//                maxPreviewWidth = displaySize.y;
+//                maxPreviewHeight = displaySize.x;
+//            }
+//
+//
+
+
 
 
             Surface surface = new Surface(texture);
 
 
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+
+
+            captureRequestBuilder.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE,
+                    CameraMetadata.STATISTICS_FACE_DETECT_MODE_FULL);
+
+
             captureRequestBuilder.addTarget(surface);
             cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
                 @Override
@@ -386,6 +435,7 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
         if (null == cameraDevice) {
             Log.e(TAG, "updatePreview error, return");
         }
+
         captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
         try {
             cameraCaptureSessions.setRepeatingRequest(captureRequestBuilder.build(), null, mBackgroundHandler);
@@ -414,9 +464,11 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
             final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(reader.getSurface());
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-            // Orientation
+
+
+        // Orientation
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
-            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getorientation(rotation));
 
         if(clickbuttonpressed) {
 
@@ -467,13 +519,31 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
 
 
             final CameraCaptureSession.CaptureCallback captureListener = new CameraCaptureSession.CaptureCallback() {
+
+
+
+                private void process(CaptureResult result) {
+                    Integer mode = result.get(CaptureResult.STATISTICS_FACE_DETECT_MODE);
+                    faces = result.get(CaptureResult.STATISTICS_FACES);
+                    if(faces != null && mode != null)
+                        Log.e("tag", "faces : " + faces.length + " , mode : " + mode );
+
+                    Log.d("harsh__","checking faces");
+
+                }
+
+                @Override
+                public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request,
+                                                CaptureResult partialResult) {
+                    process(partialResult);
+                }
+
+
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                     super.onCaptureCompleted(session, request, result);
 
-                    Log.d("harsh__","checking faces");
-
-                    faces = result.get(CaptureResult.STATISTICS_FACES);
+                    process(result);
 
                     if(clickbuttonpressed) {
                         Toast.makeText(Camera.this, "Saved:" + file, Toast.LENGTH_SHORT).show();
@@ -500,22 +570,17 @@ public class Camera extends AppCompatActivity implements AdapterView.OnItemSelec
             }, mBackgroundHandler);
         }
 
+    private Integer getorientation(int rotation) {
 
 
+        // Sensor orientation is 90 for most devices, or 270 for some devices (eg. Nexus 5X)
+        // We have to take that into account and rotate JPEG properly.
+        // For devices with orientation of 90, we simply return our mapping from ORIENTATIONS.
+        // For devices with orientation of 270, we need to rotate the JPEG 180 degrees.
+        return (ORIENTATIONS.get(rotation) + mSensorOrientation + 270) % 360;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+    }
 
 
     public void switchCamera() {
